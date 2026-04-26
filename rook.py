@@ -10,8 +10,11 @@ class Rook(Piece):
     self.name = "Ладья"
     self.points = 5
 
-  def findShifts(self, currentCol, currentRow):
+  def findShifts(self, currentCol, currentRow, verify = False):
     places = []
+    if verify is False:
+      self.attackOnKing = None # Обнуляем координаты атаки на короля
+
     for orientation in range(1,5): # 1 = Up, 2 = Rigth, 3 = Down, 4 = Left
       if orientation == 1 or orientation == 3: # Проверяем ячейки вверх = 1 (Up) и ячейки вниз = 3 (down)
         step = 1 if orientation == 1 else -1
@@ -34,6 +37,8 @@ class Rook(Piece):
 
           if piece is not None:
             if piece.isWhite is not self.isWhite:
+              if verify is False and piece.pref == "K": # Если это не проверка и есть реальная угроза королю
+                self.attackOnKing = cell # Отмечаем данные координаты как приоритетный
               places.append(cell) # Если ячейка не пустая и фигура является противником
             break
           else:
@@ -47,8 +52,9 @@ class Rook(Piece):
     self.places = self.findShifts(self.column, self.row)
     return bool(len(self.places))
 
-  def canEatKing(self, cell):
-    places = self.findShifts(cell[0], cell[1])
+  def canEat(self, cell):
+    """Функция проверяет, каким фигурам будет угрожать наша фигура на новом месте"""
+    places = self.findShifts(cell[0], cell[1], verify = True)
     for cell in places:
       piece = self.board[cell]
       if piece is not None:
@@ -56,6 +62,10 @@ class Rook(Piece):
         piece.alarm = self
 
   def calculateMoves(self):
-    cell = random.choice(self.places)
-    self.canEatKing(cell)
+    if self.attackOnKing:
+      cell = self.attackOnKing # если есть возможность атаковать короля, атакуй !!
+    else:
+      cell = random.choice(self.places) # Рандом выбрал место, куда пойдёт
+
+    self.canEat(cell)
     return cell

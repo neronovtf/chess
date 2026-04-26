@@ -10,14 +10,14 @@ class Bishop(Piece):
     self.name = "Слон"
     self.points = 3
 
-  def findShifts(self, currentCol, currentRow):
-    # newCol = currentCol
-    # newRow = currentRow
+  def findShifts(self, currentCol, currentRow, verify = False):
     places = []
-    for orientation in range(1,5): # 1 = Up + Right(UR), 2 = Down + Right(DR), 3 = Down + Left(DL), 4 = Up + Left(UL)
-
-      col = 1 if orientation == 1 or orientation == 4 else -1 # DL + UL
-      row = 1 if orientation == 1 or orientation == 2 else -1 # UR + DR
+    if verify is False:
+      self.attackOnKing = None # Обнуляем координаты атаки на короля
+    for orientation in ["UpRight", "DownRight", "DownLeft", "UpLeft"]:
+      # Указываю координаты, для проверки
+      col = 1 if orientation == "UpRight" or orientation == "UpLeft" else -1
+      row = 1 if orientation == "UpRight" or orientation == "DownRight" else -1
       # Сбрасываем позиции на исходное положение
       newCol = currentCol
       newRow = currentRow
@@ -32,6 +32,8 @@ class Bishop(Piece):
 
           if piece is not None:
             if piece.isWhite is not self.isWhite:
+              if verify is False and piece.pref == "K": # Если это не проверка и есть реальная угроза королю
+                self.attackOnKing = cell # Отмечаем данные координаты как приоритетный
               places.append(cell) # Если ячейка не пустая и фигура является противником
             break
           else:
@@ -46,8 +48,8 @@ class Bishop(Piece):
     return bool(len(self.places))
 
   def canEat(self, cell):
-    """Функция определяет, каким фигурам будет угрожать наша фигура"""
-    places = self.findShifts(cell[0], cell[1])
+    """Функция проверяет, каким фигурам будет угрожать наша фигура на новом месте"""
+    places = self.findShifts(cell[0], cell[1], verify = True)
     for cell in places:
       piece = self.board[cell]
       if piece is not None:
@@ -55,7 +57,11 @@ class Bishop(Piece):
         piece.alarm = self
 
   def calculateMoves(self):
-    cell = random.choice(self.places) # Рандом выбрал место, куда пойдёт
+    if self.attackOnKing:
+      cell = self.attackOnKing # если есть возможность атаковать короля, атакуй !!
+    else:
+      cell = random.choice(self.places) # Рандом выбрал место, куда пойдёт
+
     self.canEat(cell)
 
     return cell
