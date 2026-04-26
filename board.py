@@ -43,6 +43,7 @@ class Board:
     return [(i,j) for i,j in self.cells if self.cells[(i,j)] != None]
 
   def __havePieceCanGoByColor(self):
+    """Функция опрашивает все фигуры, оставшиеся на поле, и уточняет могут ли они ходить"""
     places = []
     for i, j in self.cells:
       cell = (i, j)
@@ -54,12 +55,25 @@ class Board:
     return places
     # return [(i, j) for i,j in self.cells if self.cells[(i,j)] != None   if self.cells[(i, j)].canGo() == True and self.nowStepWhite == self.cells[(i, j)].isWhite]
 
+  def findDangerKing(self, places):
+    dangers = []
+    for cell in places:
+      if self.cells[cell].attackOnKing is not None:
+        dangers.append(cell)
+    return dangers
+
   def go(self):
     canGoPieces = self.__havePieceCanGoByColor()
+    dangers = self.findDangerKing(canGoPieces)
+    if dangers:
+      canGoPieces = dangers # если есть фигуры, угрожающие королю, выбирать нужно из них
 
+    # Рандомом выбираем координаты фигуры, которая будет ходить
     place = random.choice(canGoPieces)
+    # Получаем фигуру
     piece = self.cells[place]
     oldPlace = piece.getPlace()
+    # Фигура, через рандом (у себя) выбирает, какой она сделает шаг
     newPlace = piece.calculateMoves()
     self.walk(oldPlace, newPlace)
 
@@ -72,6 +86,13 @@ class Board:
       else:
         print(f"Странное поведение! Прошло уже {self.maxSteps} шагов, а игра не закончена ... Завершаем принудительно!")
 
+  def findKingOpponent(self):
+    for i, j in self.cells:
+      if self.cells[(i,j)] is not None:
+        piece = self.cells[(i,j)]
+        if(piece.pref == "K") and (piece.isWhite is not self.nowStepWhite):
+          return piece
+
   def walk(self, oldPlace, newPlace):
     oldLink = self.cells[oldPlace]
     nameOldCell = oldLink.getStrCell()
@@ -80,34 +101,39 @@ class Board:
     if self.hints:
       color = "[" + ("White" if oldLink.isWhite is True else "Black") + ", " + oldLink.name + "] "
 
-    newLink = self.cells[newPlace]
+    newLinkBeforeChange = self.cells[newPlace]
     active = '-' # Означает что фигура просто пошла
     whoWasEaten = ""
     finalText = ""
-    if newLink is not None:
+    if newLinkBeforeChange is not None:
       active = 'x' # Означает, что фируга съела другую фигуру
 
-      if newLink.pref == "K": # Был съеден король, а это конец игры
-        # newLink это фигура которую съедают. И если она белая, значит победили чёрные, и наоборот
+      if newLinkBeforeChange.pref == "K": # Был съеден король, а это конец игры
+        # newLinkBeforeChange это фигура которую съедают. И если она белая, значит победили чёрные, и наоборот
         if self.hints:
-          finalText += "Белые" if newLink.isWhite is False else "Чёрные"
+          finalText += "Белые" if newLinkBeforeChange.isWhite is False else "Чёрные"
           finalText += " победили!"
         self.gameOver = True # Останавливаем игру
       else:
         # Для понимания, какую фигуру съели. На короля не распростроняется т.к. короля формально съесть невозможно
-        active += newLink.pref
+        active += newLinkBeforeChange.pref
         if self.hints:
-          whoWasEaten += " <-- " + self.correctTextWhoEat(oldLink.name, newLink.name)
+          whoWasEaten += " <-- " + self.correctTextWhoEat(oldLink.name, newLinkBeforeChange.name)
 
+    # Перемещаем фигуру со старой позации на новую
     self.cells[newPlace] = oldLink
+    # Очищаем старую позицию
     self.cells[oldPlace] = None
 
+    # Переназначаем переменную, которая отвечала за новую позицию фигуры
     newLink = self.cells[newPlace]
-    pref = newLink.pref # Обозначение для фигуры, допустим король = K, для пешки нет буквы. Так понятно, какая фигрура ходит
+
+    # Передаём классу фигуры, её новые координаы
     newLink.move(newPlace)
 
+    # Блок, отвечает за нумерцию шагов, пример: 001, 002 и т.д.
     sNumber = ""
-    if self.hints:
+    if self.hints: # Если включены подсказки
       sNumber = str(number)
       count = 3 - len(sNumber)
       for i in range(count):
@@ -115,21 +141,26 @@ class Board:
       sNumber += ". "
 
     toGiveCheck = "" # ШАХ
-    if (newLink.alarm is not None) and (newLink.pref == "K"):
-      toGiveCheck = "+" # Плюс говорит о том, что Королю поставлен ШАХ
-      if self.hints:
-        toGiveCheck += " <-- Королю выставлен ШАХ"
+
+    if newLink.pref != "K":
+      pieceKingOpponent = self.findKingOpponent()
+      if (pieceKingOpponent is not None) and (pieceKingOpponent.alarm == newLink):
+        toGiveCheck = "+" # Плюс говорит о том, что Королю поставлен ШАХ
+        if self.hints:
+          toGiveCheck += " <-- Королю выставлен ШАХ"
+          if whoWasEaten:
+            whoWasEaten = whoWasEaten.replace("<--", "+")
 
     toBeCheckmated = "" # МАТ
     if self.gameOver:
-      toBeCheckmated = "#" # Решётка означает, что королю был поставлен мат, и что партия закончена
+      toBeCheckmated = "#" # Решётка означает, что королю был поставлен мат, и партия закончена
       if self.hints:
         toBeCheckmated += " <-- ШАХ и МАТ. Игра окончена!"
 
     self.history.append(
       sNumber +
       color +
-      pref +
+      newLink.pref +
       nameOldCell +
       active +
       newLink.getStrCell() +
@@ -174,8 +205,7 @@ class Board:
           "column": col,
           "row": row,
           "board": self.cells,
-          "history": self.history,
-          "log": self.log
+          "log": self.log,
         }
 
         cell = (col, row)
