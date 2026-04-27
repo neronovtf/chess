@@ -40,7 +40,13 @@ class Rook(Piece):
               if verify is False and piece.pref == "K": # Если это не проверка и есть реальная угроза королю
                 self.attackOnKing = cell # Отмечаем данные координаты как приоритетный
               places.append(cell) # Если ячейка не пустая и фигура является противником
-            break
+              break
+            else: # Если фигура = друг
+              if verify and (piece == self): # Проверка, и фигура на проверяемом месте, является нашей фигурой
+                places.append(cell) # Если ячейка не пустая и фигура является противником
+              else:
+                break
+
           else:
             places.append(cell) # Если ячейка пустая
         else:
@@ -52,14 +58,19 @@ class Rook(Piece):
     self.places = self.findShifts(self.column, self.row)
     return bool(len(self.places))
 
-  def canEat(self, cell):
+  def canEat(self, position):
     """Функция проверяет, каким фигурам будет угрожать наша фигура на новом месте"""
-    places = self.findShifts(cell[0], cell[1], verify = True)
+    places = self.findShifts(position[0], position[1], verify = True)
+    self.newPlaces = [] # Очищаем список доступных координат, до перемещения фригуры
+    log = f"{self.name} на новой позиции {position}, будет угрожать: "
     for cell in places:
       piece = self.board[cell]
-      if piece is not None:
+      self.newPlaces.append(cell) # Запоминаем все новые позиции, куда теоретически может пойти данная фигура
+      if (piece is not None) and (piece != self) :
         # Указываем фигурам, что они находятся под ударом нашей фигуры
         piece.alarm = self
+        log += f"{piece.name} на {cell}, "
+    self.log.append(log)
 
   def calculateMoves(self):
     if self.attackOnKing:

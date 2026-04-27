@@ -10,28 +10,24 @@ class Knight(Piece):
     self.name = "Конь"
     self.points = 3
 
-  def findShifts(self, currentCol, currentrow, verify = False):
+  def findShifts(self, currentCol, currentRow, verify = False):
     places = []
     if verify is False:
       self.attackOnKing = None # Обнуляем координаты атаки на короля
 
-    for orientation in range(1,5): # 1 = Up, 2 = Right, 3 = Down, 4 = Left
+    for orientation in ["Up", "Right", "Down", "Left"]: # Проверяем все направления
+      for turn in ["plus", "minus"]: # Каждое направление нужно отработать по два раза
 
-      for turn in range(1,3): # Каждое направление нужно отработать по два раза
-
-        # Up + Down
-        if orientation == 1 or orientation == 3:
-          col = 1 if turn == 1 else -1
-          row = 2 if orientation == 3 else -2
-
-        # Right + Left
-        elif orientation == 2 or orientation == 4:
-          col = 2 if orientation == 4 else -2
-          row = 1 if turn == 1 else -1
+        if (orientation == "Up") or (orientation == "Down"):
+          row = 2 if orientation == "Up" else -2
+          col = 1 if turn == "plus" else -1
+        else: # "Right", "Left"
+          col = 2 if orientation == "Right" else -2
+          row = 1 if turn == "plus" else -1
 
         # Присоединяем новые значения к текущей позиции фигуры
         newCol = currentCol + col
-        newRow = currentrow + row
+        newRow = currentRow + row
 
         if (0 < newCol < 9) and (0 < newRow < 9): # Не выходи за диапозон
           cell = (newCol, newRow)
@@ -39,10 +35,14 @@ class Knight(Piece):
 
           if piece is not None:
             if piece.isWhite is not self.isWhite:
-              if verify is False and piece.pref == "K": # Если это не проверка и есть реальная угроза королю
+              if not verify and (piece.pref == "K"): # Если это не проверка и есть реальная угроза королю
                 self.attackOnKing = cell # Отмечаем данные координаты как приоритетный
               places.append(cell) # Если ячейка не пустая и фигура является противником
-            break
+            else: # Если фигура = друг
+              if verify and (piece == self): # Проверка, и фигура на проверяемом месте, является нашей фигурой
+                places.append(cell) # Если ячейка не пустая и фигура является противником
+              else:
+                break
           else:
             places.append(cell) # Если ячейка пустая
 
@@ -52,14 +52,19 @@ class Knight(Piece):
     self.places = self.findShifts(self.column, self.row)
     return bool(len(self.places))
 
-  def canEat(self, cell):
+  def canEat(self, position):
     """Функция проверяет, каким фигурам будет угрожать наша фигура на новом месте"""
-    places = self.findShifts(cell[0], cell[1], verify = True)
+    places = self.findShifts(position[0], position[1], verify = True)
+    self.newPlaces = [] # Очищаем список доступных координат, до перемещения фригуры
+    log = f"{self.name} на новой позиции {position}, будет угрожать: "
     for cell in places:
       piece = self.board[cell]
-      if piece is not None:
+      self.newPlaces.append(cell) # Запоминаем все новые позиции, куда теоретически может пойти данная фигура
+      if (piece is not None) and (piece != self) :
         # Указываем фигурам, что они находятся под ударом нашей фигуры
         piece.alarm = self
+        log += f"{piece.name} на {cell}, "
+    self.log.append(log)
 
   def calculateMoves(self):
     if self.attackOnKing:

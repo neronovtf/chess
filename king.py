@@ -9,6 +9,7 @@ class King(Piece):
     self.pref = "K"
     self.name = "Король"
     self.points = 0 # бесценен
+    self.enemyPieces = [] # Позиции фигур противника
 
   def findShifts(self):
     places = []
@@ -47,5 +48,45 @@ class King(Piece):
     self.places = self.findShifts()
     return bool(len(self.places))
 
+  def isNotDeadPosition(self, position):
+    # если список пустой, выявляем все фигуры противника
+    if len(self.enemyPieces) == 0:
+      for cell in self.board:
+        piece = self.board[cell]
+        if piece is not None:
+          if piece.isWhite != self.isWhite:
+            self.enemyPieces.append(cell)
+
+    log = f"Анализируем ситуацию, {self.name} идёт на позицию {position}. Список фигур противника с угрозами:\n"
+
+    # Пробегаемся по списку вражеских фигур
+    for enemyCell in self.enemyPieces:
+      piece = self.board[enemyCell]
+      log += f"\t {piece.name} на {enemyCell}. Может атаковать фигуры на позициях: {piece.newPlaces}\n"
+
+      if position in piece.newPlaces:
+        log += f"На данной позиции {self.name} грозит прямая угроза !!"
+        self.log.append(log)
+        return True
+
+    log += f"Данная позиция, безопасна для {self.name}. Он будет перемещён на данную позицию"
+    self.log.append(log)
+    return False
+
+
   def calculateMoves(self):
-    return random.choice(self.places)
+    # Выбираем рандомную позицию из списка, чтобы сделать туда шаг
+    cell = random.choice(self.places)
+    places = self.places
+
+    # Запускаем цикл с проверкой, что на новой позиции королю ничего не угрожает
+    while self.isNotDeadPosition(cell):
+        places = [item for item in places if item != cell] # исключаем из списка координату, которая является угрозой для короля
+        if len(places) != 0:
+          cell = random.choice(places) # рандомно выбираем координату из оставшегося списка
+        else:
+          print("Королю на позиции " + self.getStrCell() + " некуда ходить ...")
+          break
+
+    self.enemyPieces = [] # После проверки очищаем список
+    return cell

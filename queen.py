@@ -15,8 +15,7 @@ class Queen(Piece):
     if verify is False:
       self.attackOnKing = None # Обнуляем координаты атаки на короля
 
-    orientation = ["Up", "UpRight", "Right", "DownRight", "Down", "DownLeft", "Left", "UpLeft"]
-    for arrow in orientation:
+    for arrow in ["Up", "UpRight", "Right", "DownRight", "Down", "DownLeft", "Left", "UpLeft"]:
       newCol = currentCol
       newRow = currentRow
       for i in range(1,9):
@@ -50,10 +49,15 @@ class Queen(Piece):
 
           if piece is not None:
             if piece.isWhite is not self.isWhite:
-              if verify is False and piece.pref == "K": # Если это не проверка и есть реальная угроза королю
+              if not verify and (piece.pref == "K"): # Если это не проверка и есть реальная угроза королю
                 self.attackOnKing = cell # Отмечаем данные координаты как приоритетный
               places.append(cell) # Если ячейка не пустая и фигура является противником
-            break
+              break
+            else: # Если фигура = друг
+              if verify and (piece == self): # Проверка, и фигура на проверяемом месте, является нашей фигурой
+                places.append(cell) # Если ячейка не пустая и фигура является противником
+              else:
+                break
           else:
             places.append(cell) # Если ячейка пустая
 
@@ -63,14 +67,19 @@ class Queen(Piece):
     self.places = self.findShifts(self.column, self.row)
     return bool(len(self.places))
 
-  def canEat(self, cell):
+  def canEat(self, position):
     """Функция проверяет, каким фигурам будет угрожать наша фигура на новом месте"""
-    places = self.findShifts(cell[0], cell[1], verify = True)
+    places = self.findShifts(position[0], position[1], verify = True)
+    self.newPlaces = [] # Очищаем список доступных координат, до перемещения фригуры
+    log = f"{self.name} на новой позиции {position}, будет угрожать: "
     for cell in places:
       piece = self.board[cell]
-      if piece is not None:
+      self.newPlaces.append(cell) # Запоминаем все новые позиции, куда теоретически может пойти данная фигура
+      if (piece is not None) and (piece != self) :
         # Указываем фигурам, что они находятся под ударом нашей фигуры
         piece.alarm = self
+        log += f"{piece.name} на {cell}, "
+    self.log.append(log)
 
   def calculateMoves(self):
     if self.attackOnKing:
