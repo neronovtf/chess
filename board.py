@@ -18,9 +18,10 @@ class Board:
   maxSteps = 500
   gameOver = False
 
-  def __init__(self, hints = True, firstStep = "Any"): # firstStep = "Any" (White or Black), "White", "Black"
-    self.nowStepWhite = self.__random()
+  def __init__(self, hints = True, firstStep = "Any", showLog = True): # firstStep = "Any" (White or Black), "White", "Black"
+    self.nowStepWhite = self.whoFirst(firstStep)
     self.hints = hints
+    self.showLog = showLog
     self.name = "Шахматная доска"
     if self.hints:
       self.history.append("Первыми ходят " + ("белые" if self.nowStepWhite is True else "чёрные"))
@@ -36,8 +37,13 @@ class Board:
         self.cells[(i, j)] = None
         # self.cells[chr(97 + j) + str(i)] = None
 
-  def __random(self):
-    return bool(datetime.datetime.now().microsecond % 2)
+  def whoFirst(self, color):
+    if color == "White":
+      return True
+    elif color == "Black":
+      return False
+    else:
+      return bool(datetime.datetime.now().microsecond % 2)
 
   def __havePiece(self):
     return [(i,j) for i,j in self.cells if self.cells[(i,j)] != None]
@@ -220,4 +226,11 @@ class Board:
 
   def finish(self):
     for row in self.history:
+      print(row)
+
+    if self.showLog:
+      print("\n\n=============================== LOGGING ===============================")
+
+      for row in self.log:
         print(row)
+      print("=============================== LOGGING ===============================")
