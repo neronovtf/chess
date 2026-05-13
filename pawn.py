@@ -1,5 +1,5 @@
 """Шахматная фигура - Пешка"""
-import random
+# import random
 from piece import Piece
 
 class Pawn(Piece):
@@ -11,66 +11,82 @@ class Pawn(Piece):
     self.pref = "" # Раньше пешку обозначали буквой 'P', но сейчас она без буквы
     self.points = 1
 
-  def findShifts(self, currentCol, currentrow, verify = False):
+  def findShifts(self, currentCol = None, currentRow = None, forKing = False):
+    """
+    Находит возможные ходы фигуры.
+
+    Args:
+        currentCol (int, optional): Колонка. Если None, берётся self.column.
+        currentRow (int, optional): Строка. Если None, берётся self.row.
+    """
+    currentCol = self.column if currentCol is None else currentCol
+    currentRow = self.row if currentRow is None else currentRow
     places = []
-    if verify is False:
-      self.attackOnKing = None # Обнуляем координаты атаки на короля
 
     for orientation in ["UpRight", "UpLeft", "Up", "UpTwo"]:
+      ind = 1 if self.isWhite else -1
 
       if orientation == "UpRight":
-        newCol = currentCol + 1
-        newRow = currentrow + 1
+        newCol = currentCol + 1 * ind
+        newRow = currentRow + 1 * ind
       elif orientation == "UpLeft":
-        newCol = currentCol - 1
-        newRow = currentrow + 1
+        newCol = currentCol - 1 * ind
+        newRow = currentRow + 1 * ind
       elif orientation == "Up":
         newCol = currentCol
-        newRow = currentrow + 1
+        newRow = currentRow + 1 * ind
       elif orientation == "UpTwo":
+        # self.addLog(f"Опрашивается пешка, может ли она ходить через одну клетку ?? Это её первый шаг: {"да" if self.firstStep else "нет" }")
         if not self.firstStep: continue # если это не первый шаг фигуры, то пропускаем это действие
         newCol = currentCol
-        newRow = currentrow + 2
+        newRow = currentRow + 2 * ind
 
-      if (0 < newCol < 9) and (0 < newRow < 9): # Не выходи за диапозон
-        cell = (newCol, newRow)
-        piece = self.board[cell]
-        if piece is not None: # Не пустая
-          if piece.isWhite is not self.isWhite: # Фигура соперника
-            if not verify and (piece.pref == "K"): # Если это не проверка и есть реальная угроза королю
-              self.attackOnKing = cell # Отмечаем данные координаты как приоритетный
-            places.append(cell) # Если ячейка не пустая и фигура является противником
+      if not ((0 < newCol < 9) and (0 < newRow < 9)): # Не выходи за пределы игрового поля
+        continue
+
+      cell = (newCol, newRow)
+      piece = self.board[cell]
+
+      if (orientation == "Up") or (orientation == "UpTwo"):
+        if piece is not None:
+          break
         else:
-          if (orientation == "Up") and (orientation == "UpTwo"): # Если клетка путая, то добавляем при условии что это шаг(или два) вперёд
-            places.append(cell) # Если ячейка пустая
+          # if orientation == "UpTwo":
+            # self.addLog("Это второй шаг, и есть возможность так ходить!!")
+          places.append(cell)
+
+      if (orientation == "UpRight") or (orientation == "UpLeft"):
+        if piece is not None:
+          if piece.isWhite is not self.isWhite:
+            places.append(cell)
+        else:
+          if forKing:
+            places.append(cell)
+          else:
+            continue
+
+
+      # # Если стоит фигура, дальше смотреть нет смысла
+      # if ((orientation == "Up") or (orientation == "UpTwo")) and (piece is not None):
+      #   break
+
+      # if (orientation == "Up") or (orientation == "UpTwo"): # Просто идём вперёд
+      #   # Если дошёл, значит ячейка пустая
+      #   places.append(cell)
+
+      # elif (orientation == "UpRight") or (orientation == "UpLeft"): # Смотрим, можно ли кушать фигуры
+      #   # Есть фигура
+      #   if piece.isWhite is not self.isWhite:
+      #     places.append(cell)
 
     return places
 
-  def canGo(self):
-    self.places = self.findShifts(self.column, self.row)
-    return bool(len(self.places))
+  # def calculateMoves(self):
+  #   cell = super().calculateMoves()
+  #   self.firstStep = False # После того, как сделан шаг, пешка теряет возможность перепрыгивать через клетку
+  #   return cell
 
-  def canEat(self, position):
-    """Функция проверяет, каким фигурам будет угрожать наша фигура на новом месте"""
-    places = self.findShifts(position[0], position[1], verify = True)
-    self.newPlaces = [] # Очищаем список доступных координат, до перемещения фригуры
-    log = f"{self.name} на новой позиции {position}, будет угрожать: "
-    for cell in places:
-      piece = self.board[cell]
-      self.newPlaces.append(cell) # Запоминаем все новые позиции, куда теоретически может пойти данная фигура
-      if (piece is not None) and (piece != self) :
-        # Указываем фигурам, что они находятся под ударом нашей фигуры
-        piece.alarm = self
-        log += f"{piece.name} на {cell}, "
-    self.log.append(log)
-
-  def calculateMoves(self):
-    self.firstStep = False # После того, как сделан шаг, пешка теряет возможность перепрыгивать через клетку
-
-    if self.attackOnKing:
-      cell = self.attackOnKing # если есть возможность атаковать короля, атакуй !!
-    else:
-      cell = random.choice(self.places) # Рандом выбрал место, куда пойдёт
-
-    self.canEat(cell)
-    return cell
+  # def move(self, newPlace):
+  #   """Делает передвижение фигуры"""
+  #   super().move(newPlace)
+  #   self.firstStep = False # После того, как сделан шаг, пешка теряет возможность перепрыгивать через клетку
